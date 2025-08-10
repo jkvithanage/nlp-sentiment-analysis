@@ -1,18 +1,19 @@
 from bs4 import BeautifulSoup
 import os
 import glob
+import csv
 
 # Base path where the files are stored
 base_path = "./data/"
 
-def load_data():
+def load_data() -> list[tuple[str, float]]:
     """
     Load all review data from .review files in the data folder.
     
     Returns:
-        list: Array of tuples (review_text, sentiment) where:
+        list: list of tuples (review_text, sentiment) where:
             - review_text: string containing the review text
-            - sentiment: string containing sentiment label ('positive'/'negative')
+            - rating: rating value out of 5
     """
     all_reviews = []
     
@@ -36,6 +37,7 @@ def load_data():
             continue
     
     return all_reviews
+
 
 def _parse_reviews(xml_content):
     # Wrap content in a root element to handle multiple review elements
@@ -61,7 +63,15 @@ def _parse_reviews(xml_content):
         except (ValueError, TypeError):
             continue  # Skip reviews with invalid ratings
             
-        sentiment = 'positive' if rating >= 4.0 else 'negative'
-        data.append((text, sentiment))
+        data.append((text, rating))
     
     return data
+
+
+if __name__ == "__main__":
+    data = load_data()
+    with open('raw_data.csv', 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerows(data)
+    
+    print("Raw data saved to raw_data.csv")
