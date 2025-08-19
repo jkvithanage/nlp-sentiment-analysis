@@ -5,3 +5,7 @@ data/
 __pycache__/
 raw_data.csv
 preprocessed.csv
+
+models/
+*.csv
+.ropeproject/

@@ -41,9 +41,9 @@ def preprocess_word(word: str) -> str:
     """Word level preprocessing"""
     # Convert more than 2 letter repetitions to 2 letter
     # funnnnny --> funny
-    word = re.sub(r'(.)\1+', r'\1\1', word)
-    # Remove - & '
-    word = re.sub(r'(-|\')', '', word)
+    word = re.sub(r"(.)\1+", r"\1\1", word)
+    # Remove hyphens and apostrophes
+    word = re.sub(r"[-']", "", word)
     return word
 
 
@@ -59,14 +59,14 @@ def preprocess_reviews(raw_data: List[tuple[str, float]]) -> List[tuple[str, int
     verify_nltk_resources()
     sw = set(stopwords.words("english"))
     lemmatizer = WordNetLemmatizer()
-    
+
     processed_data = []
-    
+
     print('Preprocessing reviews...')
     for i, (review, rating) in enumerate(raw_data):
         if i % 1000 == 0:
             print(f"Processing review {i+1}/{len(raw_data)}")
-            
+
         # Convert rating to sentiment (1 for positive, 0 for negative)
         # Ratings 1-2 are negative, 4-5 are positive, 3 is neutral (excluded)
         if rating <= 2:
@@ -98,7 +98,7 @@ def preprocess_reviews(raw_data: List[tuple[str, float]]) -> List[tuple[str, int
 
         # Remove undesired punctuation
         processed_tokens = RegexpTokenizer(r'\w+').tokenize(review)
-        
+
         # Process word by word
         processed_tokens = [preprocess_word(word) for word in processed_tokens if is_valid_word(word)]
 
@@ -107,13 +107,49 @@ def preprocess_reviews(raw_data: List[tuple[str, float]]) -> List[tuple[str, int
 
         # Lemmatize
         processed_tokens = lemmatize_tokens(processed_tokens, lemmatizer)
-        
+
         # Join tokens back into text
         processed_review = " ".join(processed_tokens)
-        
+        # Skip if text ended up empty after cleaning
+        if not processed_review:
+            continue
         processed_data.append((processed_review, sentiment))
-    
+
     return processed_data
+
+
+def preprocess_text_for_inference(text: str) -> str:
+    """
+    Preprocess a single review text using the same steps
+    """
+    if text is None:
+        return ""
+    if nltk is None:
+        raise SystemExit("NLTK is required. Please `pip install nltk`.")
+    verify_nltk_resources()
+
+    sw = set(stopwords.words("english"))
+    lemmatizer = WordNetLemmatizer()
+
+    # Text-level cleaning (mirror training flow)
+    text = text.lower().strip()
+    text = text.replace("_", " ").replace("/", "")
+    text = re.sub(r"\b[0-9]+\b\s*", "", text)
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"<a[^>]*>(.*?)</a>", r"\1", text)
+    text = re.sub(r"<.*?>", " ", text)
+    text = re.sub(r"\w*\d\w*", "", text)
+
+    tokens = RegexpTokenizer(r"\w+").tokenize(text)
+    tokens = [preprocess_word(w) for w in tokens if is_valid_word(w)]
+    tokens = remove_stopwords(tokens, sw)
+    tokens = lemmatize_tokens(tokens, lemmatizer)
+    return " ".join(tokens)
+
+
+# Optional alias referenced by the UI if present
+def clean_for_vectorizer(text: str) -> str:
+    return preprocess_text_for_inference(text)
 
 
 if __name__ == "__main__":
@@ -127,9 +163,9 @@ if __name__ == "__main__":
     import csv
     with open('preprocessed.csv', 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['text', 'sentiment'])  # Header
+        writer.writerow(['text', 'label'])  # Header
         writer.writerows(processed_data)
-    
+
     print(f"Preprocessing complete! Saved {len(processed_data)} preprocessed reviews to preprocessed.csv")
     print(f"Positive reviews: {sum(1 for _, s in processed_data if s == 1)}")
     print(f"Negative reviews: {sum(1 for _, s in processed_data if s == 0)}")
