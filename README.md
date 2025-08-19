@@ -10,5 +10,9 @@ pip install -r requirements.txt
 ```
 6. Download dataset from https://www.cs.jhu.edu/%7Emdredze/datasets/sentiment/index2.html
 7. Unzip, rename it to `data` and move to project directory.
-8. Run `python train.py to train both models`
-9. Run `python launch_ui.py to launch the Gradio UI`
+8. Run `python train.py` to train both models
+9. Run `python launch_ui.py` to launch the Gradio UI
+
+Additional commands:
+- Run `python data_loader.py` to export raw data to a csv file
+- Run `python preprocess.py` to preprocess the data
